@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checklist de Segurança</title>
+
+  <!-- Manifesto PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2196f3">
+
+  <!-- Ícones -->
+  <link rel="icon" href="icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-512.png">
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
+    h1 { color: #333; }
+    .item { display: flex; align-items: center; margin-bottom: 10px; padding: 10px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .icons button { margin-left: 10px; font-size: 18px; border: none; background: none; cursor: pointer; }
+    .approved { color: green; }
+    .rejected { color: red; }
+    .na { color: gray; }
+    textarea { width: 100%; margin-top: 5px; padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    #addItem { margin-top: 20px; padding: 10px 15px; border: none; border-radius: 8px; background: #2196f3; color: white; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Checklist de Segurança</h1>
+
+  <div id="checklist"></div>
+  <button id="addItem">+ Adicionar Item</button>
+
+  <canvas id="grafico" width="300" height="300"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const checklistDiv = document.getElementById('checklist');
+    const addItemBtn = document.getElementById('addItem');
+
+    let items = [];
+
+    function atualizarChecklist() {
+      checklistDiv.innerHTML = '';
+      items.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <span>Item ${index+1}</span>
+          <div class="icons">
+            <button onclick="setStatus(${index}, 'aprovado')" class="approved">✔</button>
+            <button onclick="setStatus(${index}, 'reprovado')" class="rejected">✘</button>
+            <button onclick="setStatus(${index}, 'na')" class="na">N/A</button>
+          </div>
+          <textarea placeholder="Observações...">${item.obs || ''}</textarea>
+        `;
+        div.querySelector('textarea').addEventListener('input', (e) => {
+          items[index].obs = e.target.value;
+        });
+        checklistDiv.appendChild(div);
+      });
+      atualizarGrafico();
+    }
+
+    function setStatus(index, status) {
+      items[index].status = status;
+      atualizarChecklist();
+    }
+
+    addItemBtn.addEventListener('click', () => {
+      items.push({ status: 'na', obs: '' });
+      atualizarChecklist();
+    });
+
+    const ctx = document.getElementById('grafico').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Aprovado', 'Reprovado', 'N/A'],
+        datasets: [{
+          data: [0, 0, 0],
+          backgroundColor: ['green', 'red', 'gray']
+        }]
+      }
+    });
+
+    function atualizarGrafico() {
+      const aprovados = items.filter(i => i.status === 'aprovado').length;
+      const reprovados = items.filter(i => i.status === 'reprovado').length;
+      const na = items.filter(i => i.status === 'na').length;
+      chart.data.datasets[0].data = [aprovados, reprovados, na];
+      chart.update();
+    }
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker registrado"))
+        .catch(err => console.error("Erro no SW:", err));
+    }
+  </script>
+</body>
+</html>
